@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en" class="h-100">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<title>IOT | CMOS</title>
+
+	<!-- Bootstrap core CSS -->
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+	<style type="text/css">
+	</style>
+</head>
+<body>
+	<header>
+		<!-- Fixed navbar -->
+		<nav class="navbar navbar-expand-md navbar-dark bg-dark">
+			<a class="navbar-brand" href="/">CMOS IOT</a>
+			<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+				<span class="navbar-toggler-icon"></span>
+			</button>
+		</nav>
+	</header>
+
+	<!-- Begin page content -->
+	<main role="main" class="container-fluid">
+		<div class="row pt-4">
+			<div class="col-sm-12 col-md-4 pt-1">
+				<input class="form-control d-inline" type="text" value="1111111111" id="customer_number" placeholder="customer number">
+			</div>
+			<div class="col-sm-12 col-md-4 pt-1">
+				<input class="form-control d-inline" type="text" value="1111" id="device_password"  placeholder="device password">
+			</div>
+			<div class="col-sm-12 col-md-4 pt-1">
+				<button id="btn_get_device" class="btn btn-primary d-inline">Connect</button>
+			</div>
+		</div>
+		<br>
+		<div class="pt-4 row" style="display: none;" id="data_table">
+			<div class="col-sm-12 col-md-6">
+				<table class="table table-bordered table-hover mx-md-4">
+					<tr>
+						<td>device status</td>
+						<td id="device_status"></td>
+					</tr>
+					<tr>
+						<td>input voltage</td>
+						<td id="input_voltage"></td>
+					</tr>
+					<tr>
+						<td>output voltage</td>
+						<td id="output_voltage"></td>
+					</tr>
+					<tr>
+						<td>current</td>
+						<td id="current"></td>
+					</tr>
+					<tr>
+						<td>low cut off</td>
+						<td id="low_cut_off"></td>
+					</tr>
+					<tr>
+						<td>high cut off</td>
+						<td id="high_cut_off"></td>
+					</tr>
+					<tr>
+						<td>overload cut off</td>
+						<td id="overload_cut_off"></td>
+					</tr>
+				</table>
+			</div>
+		</div>
+
+	</main>
+
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+	<script type="text/javascript">
+	$(function(){
+
+		var data = {
+
+			customer_number: "",
+			device_password: "",
+
+			device_status: "",
+			input_voltage: "",
+			output_voltage: "",
+			current: "",
+
+			low_cut_off: "",
+			high_cut_off: "",
+			overload_cut_off: ""
+
+		};
+
+		var target = {
+			btn_get_device: $("#btn_get_device"),
+
+			customer_number: $("#customer_number"),
+			device_password: $("#device_password"),
+
+			device_status: $("#device_status"),
+			input_voltage: $("#input_voltage"),
+			output_voltage: $("#output_voltage"),
+			current: $("#current"),
+
+			low_cut_off: $("#low_cut_off"),
+			high_cut_off: $("#high_cut_off"),
+			overload_cut_off: $("#overload_cut_off"),
+		};
+
+		var timer = null;
+
+
+
+
+		function updateView() {
+			if(timer !== null) {
+				$("#data_table").show();
+			}
+			else {
+				$("#data_table").hide();
+			}
+
+			data["device_status"] = getDeviceStatusFromKey(data["device_status"]);
+
+			["device_status", "input_voltage", "output_voltage", "current",
+				"low_cut_off", "high_cut_off", "overload_cut_off"].forEach(function(key){
+				target[key].text( data[key] );
+			});
+		}
+
+		function fetchData(callback) {
+			$.ajax({
+				url: "http://52.66.52.237:4000/api/v1/device",
+				type: "POST",
+				data: {
+					phone: data.customer_number,
+					password: data.device_password,
+				},
+				success: function(respData, textStatus, jQxhr){
+					// console.log("data", data);
+					if(respData.status == 200) {
+						["device_status", "input_voltage", "output_voltage", "current",
+							"low_cut_off", "high_cut_off", "overload_cut_off"].forEach(function(key){
+							data[key] = respData.devices[0][key];
+						});
+						if(callback) callback();
+					}
+					else {
+						alert(respData.message || "Error");
+						clearTimer();
+					}
+					updateView();
+				},
+				error: function( jqXhr, textStatus, errorThrown ){
+					alert("Error Occurred");
+					clearTimer();
+					updateView();
+				}
+			});
+		}
+
+		function setTimer(){
+			clearTimer();
+			timer = setInterval(function() {
+				fetchData();
+			}, 10000);
+		}
+
+		function clearTimer(){
+			if(timer) {
+				clearInterval(timer);
+			}
+		}
+
+		function getDeviceStatusFromKey(status) {
+			status = Number(status);
+			if( isNaN(status) || status < 1 || status > 5) {
+				return "Invalid Status";
+			}
+
+			var statusMap = {
+				1: "ON",
+				2: "OFF",
+				3: "Low volt cut off",
+				4: "High volt cut off",
+				5: "Overload cut off"
+			};
+
+			return statusMap[status];
+		}
+
+		target.btn_get_device.on('click', function(e){
+			if(e) {
+				e.preventDefault();
+				e.stopPropagation();
+			}
+
+			data.customer_number = target.customer_number.val();
+			data.device_password = target.device_password.val();
+
+			fetchData(setTimer);
+		});
+	});
+
+	</script>
+</body>
+</html>
