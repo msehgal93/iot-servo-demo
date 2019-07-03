@@ -8,6 +8,24 @@
 	<!-- Bootstrap core CSS -->
 	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
 	<style type="text/css">
+		.mw {
+			max-width: 50%;
+		}
+		.btn.btn-warning.ml-1 {
+			display: inline-block;
+		}
+		.mw {
+			display: inline-block;
+			max-width: 50%;
+		}
+		.mw-1 {
+			display: inline-block;
+			max-width: 30%;
+		}
+		#data_table {
+			padding: 58px;
+			background: #fff9f9;
+		}
 	</style>
 </head>
 <body>
@@ -35,19 +53,50 @@
 			</div>
 		</div>
 		<br>
-		<div class="pt-4 row" style="display: none;" id="data_table">
-			<div class="col-sm-12 col-md-6">
-				<table class="table table-bordered table-hover mx-md-4">
+		<div class="pt-4" style="display: none;" id="data_table">
+			<br>
+			<h3>Device Data</h3>
+			<div class="row">
+				<div class="col-sm-12 col-md-4">
+					<div class="input-group ">
+						<input type="text" class="form-control" id="customer_name">
+					</div>
+				</div>
+				<div class="col-sm-12 col-md-4">
+					<div class="input-group">
+						<input type="text" class="form-control" id="device_serial">
+					</div>
+				</div>
+			</div>
+			<div class="row pt-4">
+				<div class="col-sm-12 col-md-1 col-offset-md-1">
+					<div class="input-group">
+						<input type="submit" class="btn btn-danger" value="Complain" />
+					</div>
+				</div>
+				<div class="col-sm-12 col-md-2">
+					<div class="input-group">
+						<input type="submit" class="btn btn-primary" value="Show History" />
+					</div>
+				</div>
+			</div>
+			<div class="col-sm-12 col-md-8 pt-4">
+				<table class="table">
 					<tr>
 						<td>device status</td>
-						<td id="device_status"></td>
+						<td>
+							<span id="device_status"></span>
+							<button id="device_status_btn" class="btn btn-warning ml-1">
+								Toggle
+							</button>
+						</td>
 					</tr>
 					<tr>
-						<td>input voltage</td>
+						<td>input voltage (Volt)</td>
 						<td id="input_voltage"></td>
 					</tr>
 					<tr>
-						<td>output voltage</td>
+						<td>output voltage (Volt)</td>
 						<td id="output_voltage"></td>
 					</tr>
 					<tr>
@@ -55,16 +104,49 @@
 						<td id="current"></td>
 					</tr>
 					<tr>
-						<td>low cut off</td>
-						<td id="low_cut_off"></td>
+						<td>low cut off (Volt)</td>
+						<td>
+							<input type="text" class="form-control mw" id="low_cut_off" />
+							<button class="btn btn-warning ml-1">Set</button>
+						</td>
 					</tr>
 					<tr>
-						<td>high cut off</td>
-						<td id="high_cut_off"></td>
+						<td>high cut off (Volt)</td>
+						<td>
+							<input type="text" class="form-control mw" id="high_cut_off" />
+							<button class="btn btn-warning ml-1">Set</button>
+						</td>
 					</tr>
 					<tr>
-						<td>overload cut off</td>
-						<td id="overload_cut_off"></td>
+						<td>overload cut off (Amp)</td>
+						<td>
+							<input type="text" class="form-control mw" id="overload_cut_off" />
+							<button class="btn btn-warning ml-1">Set</button>
+						</td>
+					</tr>
+					<tr>
+						<td>timer 1</td>
+						<td>
+							<input type="text" class="form-control mw-1" id="overload_cut_off" placeholder="start time" />
+							<input type="text" class="form-control mw-1" id="overload_cut_off" placeholder="end time" />
+							<button class="btn btn-warning ml-1">Set</button>
+						</td>
+					</tr>
+					<tr>
+						<td>timer 2</td>
+						<td>
+							<input type="text" class="form-control mw-1" id="overload_cut_off" placeholder="start time" />
+							<input type="text" class="form-control mw-1" id="overload_cut_off" placeholder="end time" />
+							<button class="btn btn-warning ml-1">Set</button>
+						</td>
+					</tr>
+					<tr>
+						<td>timer 3</td>
+						<td>
+							<input type="text" class="form-control mw-1" id="overload_cut_off" placeholder="start time" />
+							<input type="text" class="form-control mw-1" id="overload_cut_off" placeholder="end time" />
+							<button class="btn btn-warning ml-1">Set</button>
+						</td>
 					</tr>
 				</table>
 			</div>
@@ -78,9 +160,13 @@
 	$(function(){
 
 		var data = {
+			server_url: "http://52.66.52.237:4000",
+			// server_url: "localhost:3000",
 
+			customer_name: "",
 			customer_number: "",
 			device_password: "",
+			device_serial: "",
 
 			device_status: "",
 			input_voltage: "",
@@ -92,12 +178,16 @@
 			overload_cut_off: ""
 
 		};
+		window.data = data;
 
 		var target = {
 			btn_get_device: $("#btn_get_device"),
+			btn_device_status: $("#device_status_btn"),
 
 			customer_number: $("#customer_number"),
 			device_password: $("#device_password"),
+			customer_name: $("#customer_name"),
+			device_serial: $("#device_serial"),
 
 			device_status: $("#device_status"),
 			input_voltage: $("#input_voltage"),
@@ -124,15 +214,17 @@
 
 			data["device_status"] = getDeviceStatusFromKey(data["device_status"]);
 
-			["device_status", "input_voltage", "output_voltage", "current",
-				"low_cut_off", "high_cut_off", "overload_cut_off"].forEach(function(key){
+			["device_status", "input_voltage", "output_voltage", "current"].forEach(function(key){
 				target[key].text( data[key] );
+			});
+			["low_cut_off", "high_cut_off", "overload_cut_off", "customer_name", "device_serial"].forEach(function(key){
+				target[key].val( data[key] );
 			});
 		}
 
 		function fetchData(callback) {
 			$.ajax({
-				url: "http://52.66.52.237:4000/api/v1/device",
+				url: data.server_url + "/api/v1/device",
 				type: "POST",
 				data: {
 					phone: data.customer_number,
@@ -145,6 +237,8 @@
 							"low_cut_off", "high_cut_off", "overload_cut_off"].forEach(function(key){
 							data[key] = respData.devices[0][key];
 						});
+						data["customer_name"] = respData.devices[0]["customer_name"];
+						data["device_serial"] = "0000000" + respData.devices[0]["device_serial"];
 						if(callback) callback();
 					}
 					else {
@@ -202,6 +296,40 @@
 
 			fetchData(setTimer);
 		});
+
+		target.btn_device_status.on('click', function(e){
+			if(e) {
+				e.preventDefault();
+				e.stopPropagation();
+			}
+
+			$.ajax({
+				url: data.server_url + "/api/v1/device",
+				type: "PUT",
+				data: {
+					phone: data.customer_number,
+					password: data.device_password,
+					param: "device_status",
+					paramValue: (data.device_status == "ON") ? "OFF" : "ON",
+					device_serial: data.device_serial
+				},
+				success: function(respData, textStatus, jQxhr){
+					// console.log("data", data);
+					if(respData.status == 200) {
+						data["customer_name"] = (data.device_status == "ON") ? "OFF" : "ON";
+					}
+					else {
+						alert(respData.message || "Error");
+					}
+					updateView();
+				},
+				error: function( jqXhr, textStatus, errorThrown ){
+					alert("Error Occurred");
+					updateView();
+				}
+			});
+		});
+
 	});
 
 	</script>
